@@ -20,8 +20,7 @@ import java.util.Optional;
  *       스프링은 생성자가 하나면 그 생성자로 의존성(PostRepository)을 주입합니다 (생성자 주입).</li>
  * </ul>
  *
- * <p>지금은 개수 세기, 글 작성, 글 찾기, 글 삭제, 댓글 작성이 있습니다.
- * 다음 단계(006)에서 댓글 삭제를 이 서비스에 추가합니다.
+ * <p>개수 세기, 글 작성·찾기·삭제, 댓글 작성·삭제를 담당합니다.
  * 댓글은 글에 속해 있어 별도 서비스를 두지 않습니다.
  */
 @Service
@@ -85,6 +84,20 @@ public class PostService {
      */
     public PostComment writeComment(Post post, String content) {
         return post.addComment(content);
+    }
+
+    /**
+     * 글에서 댓글을 삭제합니다.
+     *
+     * <p>댓글도 글을 통해서만 지웁니다({@code Post.deleteComment}). 글의 댓글 목록에서 빠진 댓글은
+     * orphanRemoval 로 flush 때 DELETE 됩니다.
+     *
+     * @param post        댓글이 달린 글
+     * @param postComment 삭제할 댓글
+     * @return 실제로 삭제(목록에서 제거)되었으면 true
+     */
+    public boolean deleteComment(Post post, PostComment postComment) {
+        return post.deleteComment(postComment);
     }
 
     /**

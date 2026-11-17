@@ -28,6 +28,7 @@
 | [005-1](https://github.com/zoek1211/rest-api-2/tree/005-1) | 댓글 작성 테스트 (실패) | 댓글 API 테스트 클래스를 새로 만들고 2개를 먼저 썼다: 1번 글에 댓글을 달면 201 이고 댓글이 4건이 되는지(응답 id 가 실제 저장된 id 인지), 없는 999번 글이면 404 인지. 아직 API 가 없어 **실패**한다. | 중첩 주소(`/posts/{postId}/comments`)로 "어느 글의 댓글인지" 표현하기, JPQL `order by ... desc` + `setMaxResults(1)` 로 최신 댓글 찾기. |
 | [005-2](https://github.com/zoek1211/rest-api-2/tree/005-2) | 댓글 작성 구현 | `POST /api/v1/posts/{postId}/comments` 를 만들었다(`ApiV1PostCommentController.write`, `PostCommentDto`, `PostService.writeComment`/`flush`). 005-1 의 테스트가 **통과**한다. 댓글은 글을 통해 추가하고, 응답에 새 댓글 id 를 넣기 위해 flush 한다. | 리포지터리 save 없이 cascade PERSIST 로 저장되는 흐름, IDENTITY 전략에서 id 를 얻으려면 INSERT(flush)가 필요한 이유, DTO 에 글 전체 대신 `postId` 만 넣기, LAZY 프록시의 `getId()` 는 SQL 을 내지 않음. |
 | [006-1](https://github.com/zoek1211/rest-api-2/tree/006-1) | 댓글 삭제 테스트 (실패) | 댓글 삭제 테스트 2개를 먼저 썼다: 1번 글의 1번 댓글을 지우면 200 이고 그 댓글만 사라지는지(1번 글 댓글 3→2), 1번 글 주소로 2번 글의 4번 댓글을 지우려 하면 404 이고 4번 댓글이 남는지. 아직 API 가 없어 **실패**한다. | "다른 글의 댓글" 같은 경계 상황을 테스트로 먼저 정해 두기, 지워진 것뿐 아니라 "지워지면 안 되는 것이 남았는지"도 확인하기. |
+| [006-2](https://github.com/zoek1211/rest-api-2/tree/006-2) | 댓글 삭제 구현 | `DELETE /api/v1/posts/{postId}/comments/{id}` 를 만들었다(`Post.findCommentById`/`deleteComment`, `PostService.deleteComment`, `ApiV1PostCommentController.delete`). 006-1 의 테스트가 **통과**한다. 댓글을 "그 글의 댓글 목록" 안에서만 찾으므로 다른 글의 댓글은 404 가 된다. 실제 앱에서도 1번 댓글만 지워지고 4번 댓글은 남는 것을 확인했다. | 목록에서 빼기만 해도 orphanRemoval 로 DELETE 되는 흐름, 찾는 범위를 좁혀서 잘못된 삭제를 막는 설계, `List.remove` 가 equals 로 원소를 찾는 방식(같은 객체면 바로, 다른 객체면 id 비교). |
 
 ## 커밋별 상세 설명 (핵심 코드와 함께)
 
@@ -412,3 +413,45 @@ void deleteCommentOfOtherPost() throws Exception {
 아직 API 가 없어 두 테스트 모두 **실패**합니다 (스프링 기본 404, RsData 형식 아님).
 
 > 배울 점: 삭제 테스트는 "지워진 것"과 함께 "지워지면 안 되는 것이 남았는지"도 확인해야 합니다.
+
+### [006-2](https://github.com/zoek1211/rest-api-2/tree/006-2) 댓글 삭제 구현
+
+댓글을 DB 전체가 아니라 **그 글의 댓글 목록 안에서만** 찾습니다. 그래서 다른 글의 댓글 번호를 넣으면 찾지 못해 404 가 됩니다 (초록).
+
+```java
+// Post (엔티티)
+public Optional<PostComment> findCommentById(int id) {
+    return comments.stream().filter(comment -> comment.getId() == id).findFirst(); // 이 글의 댓글 중에서만
+}
+
+public boolean deleteComment(PostComment postComment) {
+    if (postComment == null) return false;
+    return comments.remove(postComment);   // 목록에서 빼면 orphanRemoval 로 DELETE
+}
+```
+
+```java
+// ApiV1PostCommentController
+@DeleteMapping("/{id}")
+@Transactional
+public RsData<Void> delete(@PathVariable int postId, @PathVariable int id) {
+    Post post = postService.findById(postId).get();                 // 글이 없으면 404
+    PostComment postComment = post.findCommentById(id).get();       // 이 글의 댓글이 아니면 404
+    postService.deleteComment(post, postComment);
+    return new RsData<>("200-1", "%d번 댓글이 삭제되었습니다.".formatted(id));
+}
+```
+
+요청과 응답 예 (실제 앱에서 확인 — 삭제 후 댓글 2·3·4·5 가 남음):
+
+```http
+DELETE /api/v1/posts/1/comments/1
+200
+{"resultCode":"200-1","msg":"1번 댓글이 삭제되었습니다.","data":null}
+
+DELETE /api/v1/posts/1/comments/4      ← 4번은 2번 글의 댓글
+404
+{"resultCode":"404-1","msg":"해당 데이터가 존재하지 않습니다.","data":null}
+```
+
+> 배울 점: 찾는 범위를 "그 글의 댓글"로 좁히는 것만으로 다른 글의 댓글을 지우는 실수를 막을 수 있습니다.

@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import static jakarta.persistence.CascadeType.PERSIST;
 import static jakarta.persistence.CascadeType.REMOVE;
@@ -75,5 +76,46 @@ public class Post extends BaseEntity {
         comments.add(postComment);
 
         return postComment;
+    }
+
+    /**
+     * 이 글의 댓글 중에서 id 로 댓글을 찾습니다.
+     *
+     * <p>DB 전체가 아니라 "이 글의 댓글 목록" 안에서만 찾습니다.
+     * 그래서 다른 글에 달린 댓글의 id 를 넣으면 빈 Optional 이 나오고,
+     * 컨트롤러에서 {@code .get()} 할 때 404 가 됩니다. (다른 글의 댓글을 지우는 일을 막음)
+     *
+     * <p>{@code comments} 를 처음 꺼낼 때 지연 로딩으로 이 글의 댓글들을 조회하는 SQL 이 한 번 실행됩니다.
+     *
+     * @param id 찾을 댓글 번호
+     * @return 찾은 댓글, 이 글의 댓글이 아니면 빈 Optional
+     */
+    public Optional<PostComment> findCommentById(int id) {
+        return comments
+                .stream()
+                .filter(comment -> comment.getId() == id)
+                .findFirst();
+    }
+
+    /**
+     * 이 글에서 댓글을 삭제합니다.
+     *
+     * <p>목록에서 빼기만 하면 {@code orphanRemoval = true} 때문에 "고아가 된 댓글"로 보고
+     * flush 때 JPA 가 DELETE 를 실행합니다. 댓글 리포지터리의 delete 를 부를 필요가 없습니다.
+     *
+     * <p>{@code List.remove} 는 equals 로 같은 원소를 찾습니다. 여기서는 findCommentById 로 찾은
+     * "목록 안의 바로 그 객체"가 넘어오므로 같은 객체 검사(o == this)에서 바로 찾아집니다.
+     * 만약 같은 DB 행을 가리키는 다른 객체가 넘어온다면, 그때 BaseEntity 의 id 기반 equals 가 같은 댓글로 판단해 줍니다.
+     *
+     * <p>null 검사와 boolean 반환은 참고 강의 코드를 따른 것입니다. 지금 컨트롤러는 null 을 넘기지 않고
+     * 반환값도 쓰지 않습니다.
+     *
+     * @param postComment 삭제할 댓글 (findCommentById 로 찾은 이 글의 댓글)
+     * @return 목록에서 실제로 빠졌으면 true
+     */
+    public boolean deleteComment(PostComment postComment) {
+        if (postComment == null) return false;
+
+        return comments.remove(postComment);
     }
 }

@@ -10,6 +10,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -70,6 +71,36 @@ public class ApiV1PostCommentController {
                 "201-1",
                 "%d번 댓글이 작성되었습니다.".formatted(postComment.getId()),
                 new PostCommentDto(postComment)
+        );
+    }
+
+    /**
+     * 댓글 삭제. {@code DELETE /api/v1/posts/{postId}/comments/{id}}
+     *
+     * <ol>
+     *   <li>글을 찾음 (없으면 404)</li>
+     *   <li>그 글의 댓글 목록에서 댓글을 찾음. 다른 글의 댓글이거나 없는 댓글이면 빈 Optional → {@code .get()} 에서 404</li>
+     *   <li>글에서 댓글을 뺌 → flush 때(보통 트랜잭션 커밋 직전) orphanRemoval 로 DELETE</li>
+     * </ol>
+     *
+     * @param postId 주소의 글 번호
+     * @param id     주소의 댓글 번호
+     * @return 200-1 과 메시지. data 는 null
+     */
+    @DeleteMapping("/{id}")
+    @Transactional
+    public RsData<Void> delete(
+            @PathVariable int postId,
+            @PathVariable int id
+    ) {
+        Post post = postService.findById(postId).get();
+        PostComment postComment = post.findCommentById(id).get();
+
+        postService.deleteComment(post, postComment);
+
+        return new RsData<>(
+                "200-1",
+                "%d번 댓글이 삭제되었습니다.".formatted(id)
         );
     }
 }
