@@ -32,6 +32,15 @@ dependencies {
 	// webmvc: 내장 톰캣 + 스프링 MVC(@RestController, JSON 변환 등)
 	implementation("org.springframework.boot:spring-boot-starter-webmvc")
 
+	// data-jpa: JPA(Hibernate) + Spring Data JPA. 자바 객체(엔티티)를 DB 테이블에 저장/조회
+	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+	// validation: 요청 값 검증(@NotBlank, @Size 등)
+	implementation("org.springframework.boot:spring-boot-starter-validation")
+	// h2console: 브라우저에서 H2 DB 내용을 볼 수 있는 웹 콘솔(/h2-console)
+	implementation("org.springframework.boot:spring-boot-h2console")
+	// runtimeOnly: 실행할 때만 필요. H2 는 자바로 만든 가벼운 DB (파일 또는 메모리에 저장)
+	runtimeOnly("com.h2database:h2")
+
 	// compileOnly + annotationProcessor: 컴파일할 때만 필요한 라이브러리
 	// 롬복은 @Getter, @RequiredArgsConstructor 같은 어노테이션을 보고 컴파일 시점에 코드를 만들어 줌
 	compileOnly("org.projectlombok:lombok")
@@ -44,6 +53,8 @@ dependencies {
 	// test 로 시작하는 것들은 테스트 코드에서만 사용
 	// webmvc-test: JUnit, AssertJ, MockMvc 등 웹 테스트 도구 묶음
 	testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
+	testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
+	testImplementation("org.springframework.boot:spring-boot-starter-validation-test")
 	testCompileOnly("org.projectlombok:lombok")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 	testAnnotationProcessor("org.projectlombok:lombok")

@@ -1,0 +1,35 @@
+# 모든 프로필에 공통으로 적용되는 설정입니다.
+# 프로필별 설정(application-dev.yaml, application-test.yaml)은 이 파일 위에 덮어씌워집니다.
+spring:
+  application:
+    name: back
+  profiles:
+    # 아무 프로필도 지정하지 않고 실행하면 dev 프로필로 실행
+    # (테스트는 @ActiveProfiles("test") 로 test 프로필을 씀)
+    active: dev
+  output:
+    ansi:
+      # 콘솔 로그에 색을 입혀서 읽기 쉽게
+      enabled: always
+  datasource:
+    hikari:
+      # 커넥션 풀이 자동 커밋을 끄도록. 트랜잭션(@Transactional)이 커밋 시점을 직접 관리
+      auto-commit: false
+  jpa:
+    # 실행되는 SQL 을 콘솔에 출력 (JPA 가 어떤 SQL 을 만드는지 공부할 때 유용)
+    show-sql: true
+    hibernate:
+      # 엔티티 클래스를 보고 테이블을 자동으로 만들거나 바꿈 (학습·개발용. 운영에서는 쓰지 않음)
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true      # SQL 을 줄바꿈해서 보기 좋게
+        highlight_sql: true   # SQL 키워드에 색
+        use_sql_comments: true # 어떤 JPA 동작에서 나온 SQL 인지 주석으로 표시
+logging:
+  level:
+    # SQL 의 ? 자리에 실제로 들어간 값과 조회 결과 값을 로그로 출력
+    org.hibernate.orm.jdbc.bind: TRACE
+    org.hibernate.orm.jdbc.extract: TRACE
+    # 트랜잭션 시작/커밋/롤백 로그
+    org.springframework.transaction.interceptor: TRACE

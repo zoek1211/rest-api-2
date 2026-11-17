@@ -1,0 +1,14 @@
+# dev 프로필: 개발할 때 ./gradlew bootRun 으로 실행하면 적용됩니다.
+spring:
+  datasource:
+    # 파일 DB: 프로젝트 폴더에 db_dev.mv.db 파일이 생기고, 앱을 껐다 켜도 데이터가 남음
+    # MODE=MySQL: 나중에 MySQL 로 옮기기 쉽도록 MySQL 문법 호환 모드
+    url: jdbc:h2:./db_dev;MODE=MySQL
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  h2:
+    console:
+      # http://localhost:8080/h2-console 에서 DB 내용을 볼 수 있음
+      # 접속 정보: JDBC URL = jdbc:h2:./db_dev;MODE=MySQL, User Name = sa, Password = (없음)
+      enabled: true

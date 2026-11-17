@@ -1,0 +1,8 @@
+# test 프로필: 테스트 클래스에 @ActiveProfiles("test") 를 붙이면 적용됩니다.
+spring:
+  datasource:
+    # 메모리 DB: 테스트가 끝나면 사라짐. 개발용 DB(db_dev) 데이터를 건드리지 않음
+    url: jdbc:h2:mem:db_test;MODE=MySQL
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver

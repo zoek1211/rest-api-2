@@ -35,3 +35,6 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### H2 DB 파일 (dev 프로필에서 생성) ###
+db_dev*
