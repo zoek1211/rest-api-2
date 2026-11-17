@@ -14,6 +14,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -51,6 +52,14 @@ public class ApiV1PostCommentControllerTest {
                         "select count(c) from PostComment c where c.post.id = :postId", Long.class)
                 .setParameter("postId", postId)
                 .getSingleResult();
+    }
+
+    /** 해당 id 의 댓글이 DB 에 남아 있는지 확인합니다. */
+    private boolean commentExists(int commentId) {
+        return em.createQuery(
+                        "select count(c) from PostComment c where c.id = :id", Long.class)
+                .setParameter("id", commentId)
+                .getSingleResult() > 0;
     }
 
     /** 특정 글에 가장 최근에 달린 댓글(id 가 가장 큰 댓글)을 DB 에서 가져옵니다. */
@@ -119,5 +128,55 @@ public class ApiV1PostCommentControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.resultCode").value("404-1"))
                 .andExpect(jsonPath("$.msg").value("해당 데이터가 존재하지 않습니다."));
+    }
+
+    @Test
+    @DisplayName("댓글 삭제 - 1번 글의 1번 댓글을 지우면 200 이고 그 댓글만 사라진다")
+    // 메서드 이름을 delete 로 지으면 static import 한 delete(...) 를 가리므로 deleteComment 로 지음
+    void deleteComment() throws Exception {
+        // given: 1번 글에 댓글 1, 2, 3 이 있음
+        assertThat(countCommentsOf(1)).isEqualTo(3);
+        assertThat(commentExists(1)).isTrue();
+
+        // when: 1번 글의 1번 댓글 삭제 요청 (주소에 글 번호와 댓글 번호가 모두 들어감)
+        ResultActions resultActions = mvc
+                .perform(
+                        delete("/api/v1/posts/1/comments/1")
+                )
+                .andDo(print());
+
+        // then: 응답이 스펙대로인지
+        resultActions
+                .andExpect(status().isOk()) // 200
+                .andExpect(jsonPath("$.resultCode").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("1번 댓글이 삭제되었습니다."))
+                .andExpect(jsonPath("$.data").doesNotExist()); // 삭제는 돌려줄 데이터가 없음 (null)
+
+        // then: 1번 댓글만 사라지고 1번 글의 나머지 댓글(2, 3)은 남음
+        assertThat(commentExists(1)).isFalse();
+        assertThat(countCommentsOf(1)).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("댓글 삭제 - 다른 글의 댓글을 이 글 주소로 지우려 하면 404 이고 그 댓글은 남는다")
+    void deleteCommentOfOtherPost() throws Exception {
+        // given: 4번 댓글은 2번 글의 댓글 (1번 글의 댓글이 아님)
+        assertThat(commentExists(4)).isTrue();
+
+        // when: 1번 글 주소로 4번 댓글 삭제 요청
+        ResultActions resultActions = mvc
+                .perform(
+                        delete("/api/v1/posts/1/comments/4")
+                )
+                .andDo(print());
+
+        // then: 1번 글에는 4번 댓글이 없으므로 404
+        resultActions
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.resultCode").value("404-1"))
+                .andExpect(jsonPath("$.msg").value("해당 데이터가 존재하지 않습니다."));
+
+        // then: 엉뚱한 댓글이 지워지지 않음
+        assertThat(commentExists(4)).isTrue();
     }
 }
