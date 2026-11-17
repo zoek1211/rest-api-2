@@ -1,0 +1,44 @@
+package com.back.domain.post.post.service;
+
+import com.back.domain.post.post.entity.Post;
+import com.back.domain.post.post.repository.PostRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+/**
+ * 글과 댓글에 대한 비즈니스 로직을 담당하는 서비스입니다.
+ *
+ * <p>컨트롤러(요청/응답 처리)와 리포지터리(DB 접근) 사이에 있는 계층입니다.
+ * 컨트롤러는 리포지터리를 직접 쓰지 않고 서비스를 통해서 일을 시킵니다.
+ *
+ * <ul>
+ *   <li>{@code @Service}: 스프링이 이 클래스를 빈으로 등록 (컴포넌트 스캔 대상)</li>
+ *   <li>{@code @RequiredArgsConstructor}: 롬복이 final 필드를 받는 생성자를 만들어 줌.
+ *       스프링은 생성자가 하나면 그 생성자로 의존성(PostRepository)을 주입합니다 (생성자 주입).</li>
+ * </ul>
+ *
+ * <p>지금은 샘플 데이터에 필요한 개수 세기와 글 작성만 있습니다.
+ * 이후 단계(003~006)에서 글 삭제, 댓글 작성·삭제를 이 서비스에 추가합니다.
+ * 댓글은 글에 속해 있어 별도 서비스를 두지 않을 예정이기 때문입니다.
+ */
+@Service
+@RequiredArgsConstructor
+public class PostService {
+    private final PostRepository postRepository;
+
+    /** 저장된 글의 개수. 샘플 데이터를 이미 넣었는지 확인할 때 씁니다. */
+    public long count() {
+        return postRepository.count();
+    }
+
+    /**
+     * 새 글을 작성(저장)합니다.
+     *
+     * @return 저장된 글. {@code save} 가 INSERT 를 실행하므로 id 가 채워져 있습니다.
+     */
+    public Post write(String title, String content) {
+        Post post = new Post(title, content);
+
+        return postRepository.save(post);
+    }
+}

@@ -12,6 +12,10 @@ spring:
       # 콘솔 로그에 색을 입혀서 읽기 쉽게
       enabled: always
   datasource:
+    # dev/test 모두 H2 를 쓰므로 공통 접속 정보는 여기에 두고, 프로필 파일에는 url 만 둠
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
     hikari:
       # 커넥션 풀이 자동 커밋을 끄도록. 트랜잭션(@Transactional)이 커밋 시점을 직접 관리
       auto-commit: false

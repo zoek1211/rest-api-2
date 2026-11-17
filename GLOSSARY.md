@@ -5,7 +5,7 @@
 ## Language
 
 **글 (Post)**:
-제목과 내용을 가진 게시물.
+게시판에 올린, 제목과 내용으로 이루어진 글 한 편.
 _Avoid_: 게시물, Article, Board
 
 **댓글 (PostComment)**:

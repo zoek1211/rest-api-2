@@ -2,6 +2,7 @@ package com.back;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
 /**
  * 애플리케이션의 시작점(진입점)입니다.
@@ -15,8 +16,13 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  *       {@code @Component}, {@code @Service}, {@code @RestController} 등을 찾아 빈으로 등록</li>
  * </ul>
  * 그래서 이 클래스는 항상 최상위 패키지(com.back)에 두어야 하위 패키지의 클래스들이 모두 스캔됩니다.
+ *
+ * <p>{@code @EnableJpaAuditing} 은 JPA Auditing 기능을 켭니다.
+ * 이게 있어야 BaseEntity 의 {@code @CreatedDate}, {@code @LastModifiedDate} 필드에
+ * 저장·수정 시각이 자동으로 채워집니다.
  */
 @SpringBootApplication
+@EnableJpaAuditing
 public class BackApplication {
 
 	/**
