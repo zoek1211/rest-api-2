@@ -25,6 +25,7 @@
 | [003-2](https://github.com/zoek1211/rest-api-2/tree/003-2) | 글 작성 구현 | `POST /api/v1/posts` 를 만들었다(`ApiV1PostController.write`, 응답용 `PostDto`). 003-1 의 테스트 2개가 **통과**한다. 성공은 201 `201-1`, 제목 없음·글자 수 위반은 400 `400-1`, 잘못된 JSON 은 400 "요청 본문이 올바르지 않습니다." | TDD 의 초록 단계: 테스트를 통과시킬 만큼만 구현. `@RequestBody`+`@Valid` 와 `@NotBlank`/`@Size` 검증, 엔티티 대신 DTO 로 응답하는 이유(양방향 관계 무한 루프, 응답 형식 분리). |
 | [004-1](https://github.com/zoek1211/rest-api-2/tree/004-1) | 글 삭제 테스트 (실패) | 글 삭제 테스트 2개를 먼저 썼다: 1번 글(댓글 3건)을 지우면 200 이고 글과 댓글이 모두 사라지는지, 없는 999번 글을 지우면 404 `404-1` 인지. 아직 API 가 없어서 **실패**한다. | 샘플 데이터를 테스트의 "given" 으로 쓰기, `EntityManager`+JPQL 로 댓글 수 세기(쿼리 전 자동 flush), `@PathVariable` 로 들어갈 주소 설계, static import 와 메서드 이름 충돌. |
 | [004-2](https://github.com/zoek1211/rest-api-2/tree/004-2) | 글 삭제 구현 | `DELETE /api/v1/posts/{id}` 를 만들었다(`PostService.findById`/`delete`, `ApiV1PostController.delete`). 004-1 의 테스트가 **통과**한다. 없는 글이면 `findById(...).get()` 의 예외를 전역 예외 처리가 404 로 바꾼다. 실제 앱에서도 1번 글을 지우면 댓글 1~3 이 함께 사라지는 것을 확인했다. | `@DeleteMapping` 과 `@PathVariable`, HTTP 메서드로 하는 일을 구분하는 REST 방식, `Optional` 과 `.get()` 의 예외, cascade REMOVE 가 부모보다 먼저 자식에게 전파되어 댓글이 먼저 지워지는 순서. |
+| [005-1](https://github.com/zoek1211/rest-api-2/tree/005-1) | 댓글 작성 테스트 (실패) | 댓글 API 테스트 클래스를 새로 만들고 2개를 먼저 썼다: 1번 글에 댓글을 달면 201 이고 댓글이 4건이 되는지(응답 id 가 실제 저장된 id 인지), 없는 999번 글이면 404 인지. 아직 API 가 없어 **실패**한다. | 중첩 주소(`/posts/{postId}/comments`)로 "어느 글의 댓글인지" 표현하기, JPQL `order by ... desc` + `setMaxResults(1)` 로 최신 댓글 찾기. |
 
 ## 커밋별 상세 설명 (핵심 코드와 함께)
 
@@ -303,3 +304,36 @@ DELETE /api/v1/posts/999
 ```
 
 > 배울 점: 같은 주소라도 HTTP 메서드(GET/POST/DELETE)로 하는 일을 나누는 것이 REST 방식이고, `Optional.get()` 의 예외를 전역 예외 처리가 404 로 바꿔 줍니다.
+
+### [005-1](https://github.com/zoek1211/rest-api-2/tree/005-1) 댓글 작성 테스트 (실패)
+
+댓글은 글에 속하므로 주소도 글 아래에 둡니다: `POST /api/v1/posts/{postId}/comments`. 새 테스트 클래스를 만들고 테스트부터 씁니다.
+
+```java
+@Test
+void write() throws Exception {
+    assertThat(countCommentsOf(1)).isEqualTo(3);                       // given: 1번 글 댓글 3건
+
+    ResultActions resultActions = mvc.perform(
+            post("/api/v1/posts/1/comments")                            // when
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"content\": \"새 댓글\"}"));
+
+    assertThat(countCommentsOf(1)).isEqualTo(4);                       // then: 4건
+    PostComment comment = findLatestCommentOf(1);                       // id 가 가장 큰 댓글
+    resultActions
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.data.id").value(comment.getId()))   // 응답 id == 실제 저장된 id
+            .andExpect(jsonPath("$.data.postId").value(1));
+}
+
+// 최신 댓글: id 내림차순으로 정렬해서 맨 위 1건
+private PostComment findLatestCommentOf(int postId) {
+    return em.createQuery("select c from PostComment c where c.post.id = :postId order by c.id desc", PostComment.class)
+             .setParameter("postId", postId).setMaxResults(1).getSingleResult();
+}
+```
+
+없는 글(`POST /api/v1/posts/999/comments`)은 404 `404-1` 이어야 합니다. 아직 API 가 없어 두 테스트 모두 **실패**합니다 (댓글 수가 3 그대로, 404 응답이 RsData 형식이 아님).
+
+> 배울 점: 주소를 `/posts/{postId}/comments` 처럼 중첩하면 "어느 글의 댓글인지"가 주소에 드러납니다.
