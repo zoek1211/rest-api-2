@@ -5,6 +5,8 @@ import com.back.domain.post.post.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
+
 /**
  * 글과 댓글에 대한 비즈니스 로직을 담당하는 서비스입니다.
  *
@@ -17,8 +19,8 @@ import org.springframework.stereotype.Service;
  *       스프링은 생성자가 하나면 그 생성자로 의존성(PostRepository)을 주입합니다 (생성자 주입).</li>
  * </ul>
  *
- * <p>지금은 샘플 데이터에 필요한 개수 세기와 글 작성만 있습니다.
- * 이후 단계(003~006)에서 글 삭제, 댓글 작성·삭제를 이 서비스에 추가합니다.
+ * <p>지금은 개수 세기, 글 작성, 글 찾기, 글 삭제가 있습니다.
+ * 이후 단계(005~006)에서 댓글 작성·삭제를 이 서비스에 추가합니다.
  * 댓글은 글에 속해 있어 별도 서비스를 두지 않을 예정이기 때문입니다.
  */
 @Service
@@ -40,5 +42,33 @@ public class PostService {
         Post post = new Post(title, content);
 
         return postRepository.save(post);
+    }
+
+    /**
+     * id 로 글을 찾습니다.
+     *
+     * <p>{@code Optional} 은 "값이 있을 수도, 없을 수도 있음"을 나타내는 상자입니다.
+     * null 을 그냥 돌려주면 받는 쪽이 null 검사를 잊기 쉬운데, Optional 은 꺼낼 때 없음을 처리하도록 유도합니다.
+     * 컨트롤러에서 {@code .get()} 으로 꺼낼 때 글이 없으면 NoSuchElementException 이 나고,
+     * GlobalExceptionHandler 가 404 로 바꿔 응답합니다.
+     *
+     * @param id 글 번호
+     * @return 찾은 글, 없으면 빈 Optional
+     */
+    public Optional<Post> findById(int id) {
+        return postRepository.findById(id);
+    }
+
+    /**
+     * 글을 삭제합니다.
+     *
+     * <p>Post.comments 에 cascade REMOVE 가 있어서, 글을 지우면 그 글의 댓글들도 함께 DELETE 됩니다.
+     * cascade 는 글의 삭제를 예약하기 전에 자식(댓글)에게 먼저 전파되므로 댓글 DELETE 가 먼저 실행되고,
+     * 그 덕분에 "댓글이 글을 가리키는 외래키" 위반 없이 글까지 지울 수 있습니다.
+     *
+     * @param post 삭제할 글 (findById 로 찾은 영속 상태의 글)
+     */
+    public void delete(Post post) {
+        postRepository.delete(post);
     }
 }

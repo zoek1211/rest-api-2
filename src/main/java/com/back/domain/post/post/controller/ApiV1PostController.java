@@ -9,6 +9,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -75,6 +77,37 @@ public class ApiV1PostController {
                 "201-1",
                 "%d번 글이 작성되었습니다.".formatted(post.getId()),
                 new PostDto(post)
+        );
+    }
+
+    /**
+     * 글 삭제. {@code DELETE /api/v1/posts/{id}}
+     *
+     * <ul>
+     *   <li>{@code @DeleteMapping("/{id}")}: HTTP DELETE 메서드 + 주소의 마지막 한 구간을 {id} 라는 이름으로 받음.
+     *       같은 주소라도 GET(조회), PUT(수정), DELETE(삭제)처럼 HTTP 메서드로 하는 일을 구분하는 것이 REST 방식</li>
+     *   <li>{@code @PathVariable int id}: 주소의 {id} 값을 int 로 바꿔서 받음. 예) /api/v1/posts/1 → id = 1.
+     *       /api/v1/posts/abc 처럼 숫자로 바꿀 수 없으면 이 메서드는 실행되지 않고 스프링이 400 오류로 응답</li>
+     * </ul>
+     *
+     * <p>글이 없으면 {@code .get()} 에서 NoSuchElementException → GlobalExceptionHandler 가 404 응답.
+     * 그 글의 댓글은 Post.comments 의 cascade REMOVE 로 함께 삭제됩니다.
+     *
+     * @param id 삭제할 글 번호
+     * @return 200-1 과 메시지. 돌려줄 데이터가 없으므로 data 는 null ({@code RsData<Void>})
+     */
+    @DeleteMapping("/{id}")
+    @Transactional
+    public RsData<Void> delete(
+            @PathVariable int id
+    ) {
+        Post post = postService.findById(id).get();
+
+        postService.delete(post);
+
+        return new RsData<>(
+                "200-1",
+                "%d번 글이 삭제되었습니다.".formatted(id)
         );
     }
 }

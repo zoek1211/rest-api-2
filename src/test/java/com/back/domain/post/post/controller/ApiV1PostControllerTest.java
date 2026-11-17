@@ -64,6 +64,8 @@ public class ApiV1PostControllerTest {
      * <p>JPQL 은 테이블이 아니라 엔티티(PostComment)를 대상으로 쓰는 SQL 비슷한 쿼리입니다.
      * 쿼리를 실행하기 전에 JPA 가 아직 DB 에 반영 안 된 변경(예: 삭제)을 먼저 flush 하므로,
      * 같은 트랜잭션 안에서 방금 한 삭제도 결과에 반영됩니다.
+     * (MockMvc 요청은 테스트와 같은 스레드에서 실행되어, 컨트롤러의 @Transactional 이 테스트의 트랜잭션에
+     * 합류합니다. 그래서 요청이 바꾼 내용을 여기서 볼 수 있고, 테스트가 끝나면 함께 롤백됩니다)
      */
     private long countCommentsOf(int postId) {
         return em.createQuery(
@@ -144,8 +146,9 @@ public class ApiV1PostControllerTest {
 
     @Test
     @DisplayName("글 삭제 - 있는 글을 지우면 200 이고, 글과 그 글의 댓글이 모두 사라진다")
-    // 메서드 이름을 delete 로 지으면 위에서 static import 한 MockMvc 의 delete(...) 와 이름이 겹쳐
-    // 컴파일 오류가 나므로 deletePost 로 지음
+    // 메서드 이름을 delete 로 지으면, 자바에서는 클래스 안의 메서드가 같은 이름의 static import
+    // (MockMvcRequestBuilders.delete) 를 인자 개수와 상관없이 가립니다.
+    // 그러면 delete("/api/v1/posts/1") 이 이 테스트 메서드를 가리키게 되어 컴파일 오류가 나므로 deletePost 로 지음
     void deletePost() throws Exception {
         // given: 샘플 데이터의 1번 글에는 댓글이 3건 (댓글 1-1, 1-2, 1-3)
         assertThat(countCommentsOf(1)).isEqualTo(3);
