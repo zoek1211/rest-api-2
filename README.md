@@ -26,6 +26,7 @@
 | [004-1](https://github.com/zoek1211/rest-api-2/tree/004-1) | 글 삭제 테스트 (실패) | 글 삭제 테스트 2개를 먼저 썼다: 1번 글(댓글 3건)을 지우면 200 이고 글과 댓글이 모두 사라지는지, 없는 999번 글을 지우면 404 `404-1` 인지. 아직 API 가 없어서 **실패**한다. | 샘플 데이터를 테스트의 "given" 으로 쓰기, `EntityManager`+JPQL 로 댓글 수 세기(쿼리 전 자동 flush), `@PathVariable` 로 들어갈 주소 설계, static import 와 메서드 이름 충돌. |
 | [004-2](https://github.com/zoek1211/rest-api-2/tree/004-2) | 글 삭제 구현 | `DELETE /api/v1/posts/{id}` 를 만들었다(`PostService.findById`/`delete`, `ApiV1PostController.delete`). 004-1 의 테스트가 **통과**한다. 없는 글이면 `findById(...).get()` 의 예외를 전역 예외 처리가 404 로 바꾼다. 실제 앱에서도 1번 글을 지우면 댓글 1~3 이 함께 사라지는 것을 확인했다. | `@DeleteMapping` 과 `@PathVariable`, HTTP 메서드로 하는 일을 구분하는 REST 방식, `Optional` 과 `.get()` 의 예외, cascade REMOVE 가 부모보다 먼저 자식에게 전파되어 댓글이 먼저 지워지는 순서. |
 | [005-1](https://github.com/zoek1211/rest-api-2/tree/005-1) | 댓글 작성 테스트 (실패) | 댓글 API 테스트 클래스를 새로 만들고 2개를 먼저 썼다: 1번 글에 댓글을 달면 201 이고 댓글이 4건이 되는지(응답 id 가 실제 저장된 id 인지), 없는 999번 글이면 404 인지. 아직 API 가 없어 **실패**한다. | 중첩 주소(`/posts/{postId}/comments`)로 "어느 글의 댓글인지" 표현하기, JPQL `order by ... desc` + `setMaxResults(1)` 로 최신 댓글 찾기. |
+| [005-2](https://github.com/zoek1211/rest-api-2/tree/005-2) | 댓글 작성 구현 | `POST /api/v1/posts/{postId}/comments` 를 만들었다(`ApiV1PostCommentController.write`, `PostCommentDto`, `PostService.writeComment`/`flush`). 005-1 의 테스트가 **통과**한다. 댓글은 글을 통해 추가하고, 응답에 새 댓글 id 를 넣기 위해 flush 한다. | 리포지터리 save 없이 cascade PERSIST 로 저장되는 흐름, IDENTITY 전략에서 id 를 얻으려면 INSERT(flush)가 필요한 이유, DTO 에 글 전체 대신 `postId` 만 넣기, LAZY 프록시의 `getId()` 는 SQL 을 내지 않음. |
 
 ## 커밋별 상세 설명 (핵심 코드와 함께)
 
@@ -337,3 +338,44 @@ private PostComment findLatestCommentOf(int postId) {
 없는 글(`POST /api/v1/posts/999/comments`)은 404 `404-1` 이어야 합니다. 아직 API 가 없어 두 테스트 모두 **실패**합니다 (댓글 수가 3 그대로, 404 응답이 RsData 형식이 아님).
 
 > 배울 점: 주소를 `/posts/{postId}/comments` 처럼 중첩하면 "어느 글의 댓글인지"가 주소에 드러납니다.
+
+### [005-2](https://github.com/zoek1211/rest-api-2/tree/005-2) 댓글 작성 구현
+
+글을 찾고, 글에 댓글을 추가하고, flush 로 INSERT 를 바로 실행해서 새 댓글 번호를 응답에 넣습니다 (초록).
+
+```java
+@RestController
+@RequestMapping("/api/v1/posts/{postId}/comments")      // 댓글 주소는 글 아래에 중첩
+public class ApiV1PostCommentController {
+    public record PostCommentWriteReqBody(@NotBlank @Size(min = 2, max = 100) String content) { }
+
+    @PostMapping
+    @Transactional
+    public RsData<PostCommentDto> write(@PathVariable int postId,
+                                        @RequestBody @Valid PostCommentWriteReqBody reqBody) {
+        Post post = postService.findById(postId).get();                 // 없으면 404
+        PostComment postComment = postService.writeComment(post, reqBody.content()); // post.addComment()
+        postService.flush();                                             // INSERT 실행 → id 확정
+        return new RsData<>("201-1", "%d번 댓글이 작성되었습니다.".formatted(postComment.getId()),
+                new PostCommentDto(postComment));
+    }
+}
+```
+
+```java
+// 응답에는 글 전체 대신 글 번호만 (순환 방지). LAZY 프록시의 getId() 는 SQL 을 내지 않음
+public record PostCommentDto(int id, LocalDateTime createDate, LocalDateTime modifyDate,
+                             int postId, String content) { ... }
+```
+
+요청과 응답 예 (실제 앱에서 확인):
+
+```http
+POST /api/v1/posts/3/comments
+{"content": "curl 댓글"}
+
+201
+{"resultCode":"201-1","msg":"6번 댓글이 작성되었습니다.","data":{"id":6,"postId":3,"content":"curl 댓글", ...}}
+```
+
+> 배울 점: id 를 DB 가 정하는(IDENTITY) 경우, flush 로 INSERT 를 실행하기 전까지 새 엔티티의 id 는 0 입니다.

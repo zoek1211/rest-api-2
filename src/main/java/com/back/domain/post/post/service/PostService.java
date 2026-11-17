@@ -2,6 +2,7 @@ package com.back.domain.post.post.service;
 
 import com.back.domain.post.post.entity.Post;
 import com.back.domain.post.post.repository.PostRepository;
+import com.back.domain.post.postComment.entity.PostComment;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -19,9 +20,9 @@ import java.util.Optional;
  *       스프링은 생성자가 하나면 그 생성자로 의존성(PostRepository)을 주입합니다 (생성자 주입).</li>
  * </ul>
  *
- * <p>지금은 개수 세기, 글 작성, 글 찾기, 글 삭제가 있습니다.
- * 이후 단계(005~006)에서 댓글 작성·삭제를 이 서비스에 추가합니다.
- * 댓글은 글에 속해 있어 별도 서비스를 두지 않을 예정이기 때문입니다.
+ * <p>지금은 개수 세기, 글 작성, 글 찾기, 글 삭제, 댓글 작성이 있습니다.
+ * 다음 단계(006)에서 댓글 삭제를 이 서비스에 추가합니다.
+ * 댓글은 글에 속해 있어 별도 서비스를 두지 않습니다.
  */
 @Service
 @RequiredArgsConstructor
@@ -70,5 +71,29 @@ public class PostService {
      */
     public void delete(Post post) {
         postRepository.delete(post);
+    }
+
+    /**
+     * 글에 댓글을 작성합니다.
+     *
+     * <p>댓글은 글을 통해서만 만듭니다({@code Post.addComment}). 댓글 리포지터리에 save 하지 않아도,
+     * 트랜잭션 안의 영속 상태 글에 추가했으므로 flush 때 cascade PERSIST 로 INSERT 됩니다.
+     *
+     * @param post    댓글을 달 글 (findById 로 찾은 영속 상태의 글)
+     * @param content 댓글 내용
+     * @return 새 댓글. 아직 flush 전이면 id 가 0 이므로, id 가 필요하면 {@link #flush()} 를 먼저 부릅니다.
+     */
+    public PostComment writeComment(Post post, String content) {
+        return post.addComment(content);
+    }
+
+    /**
+     * 지금까지 쌓인 변경을 DB 에 바로 반영(flush)합니다. 커밋은 아닙니다.
+     *
+     * <p>새 댓글의 id 는 INSERT 가 실행되어야 정해집니다(IDENTITY 전략).
+     * 응답에 새 댓글 번호를 넣으려면 트랜잭션이 끝나기 전에 INSERT 를 실행시켜야 하므로 flush 합니다.
+     */
+    public void flush() {
+        postRepository.flush();
     }
 }

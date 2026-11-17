@@ -83,15 +83,15 @@ public class ApiV1PostCommentControllerTest {
 
         // then: 1번 글의 댓글이 4건이 되고, 가장 최근 댓글이 방금 보낸 내용
         assertThat(countCommentsOf(1)).isEqualTo(4);
-        PostComment comment = findLatestCommentOf(1);
-        assertThat(comment.getContent()).isEqualTo("새 댓글");
+        PostComment postComment = findLatestCommentOf(1);
+        assertThat(postComment.getContent()).isEqualTo("새 댓글");
 
         // then: 응답이 스펙대로인지. 응답의 id 는 실제로 저장된 댓글의 id 여야 함 (0 이면 안 됨)
         resultActions
                 .andExpect(status().isCreated()) // 201
                 .andExpect(jsonPath("$.resultCode").value("201-1"))
-                .andExpect(jsonPath("$.msg").value("%d번 댓글이 작성되었습니다.".formatted(comment.getId())))
-                .andExpect(jsonPath("$.data.id").value(comment.getId()))
+                .andExpect(jsonPath("$.msg").value("%d번 댓글이 작성되었습니다.".formatted(postComment.getId())))
+                .andExpect(jsonPath("$.data.id").value(postComment.getId()))
                 .andExpect(jsonPath("$.data.createDate").exists())
                 .andExpect(jsonPath("$.data.modifyDate").exists())
                 .andExpect(jsonPath("$.data.postId").value(1))
