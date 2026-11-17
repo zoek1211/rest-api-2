@@ -18,3 +18,4 @@
 | 번호 | 제목 | 무엇을 / 왜 | 배울 점 |
 | ---- | ---- | ----------- | ------- |
 | [000-1](https://github.com/zoek1211/rest-api-2/tree/000-1) | 작업지침과 설정 문서 | 코드를 쓰기 전에 작업 규칙(CLAUDE.md), 이슈 트래커·라벨·도메인 문서 위치(docs/agents), 용어집(GLOSSARY.md)을 정했다. | 용어(글=Post, 댓글=PostComment)를 먼저 정해 두면 코드·테스트·이슈에서 같은 말을 쓰게 된다. |
+| [001-1](https://github.com/zoek1211/rest-api-2/tree/001-1) | 프로젝트 생성 | start.spring.io 로 Spring Boot 4.1.2 / Java 25 / Gradle Kotlin DSL 프로젝트를 만들었다. 의존성은 webmvc, lombok, devtools 만. | `@SpringBootApplication` 이 하는 일(자동 설정 + 컴포넌트 스캔), Gradle wrapper(`./gradlew`)로 누구나 같은 Gradle 버전으로 빌드하는 법, `@SpringBootTest` 스모크 테스트. |
